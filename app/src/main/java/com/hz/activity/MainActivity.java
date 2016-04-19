@@ -127,7 +127,9 @@ public class MainActivity extends BaseMapActivity implements View.OnClickListene
     //private List<MapLineEntity> tempLineEntityList;
     private MapLineEntity entity;
     private List<MapLineItemEntity>  list_item_entity;
-    private List<MapLineEntity> tempLineEntityList;
+    private boolean flag_once = true;
+    private List<MapLineEntity> list_other_select = new ArrayList<>();
+    private MapLineEntity firstEntity;
 
     //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
     @Override//-->initComponents();
@@ -916,7 +918,7 @@ public class MainActivity extends BaseMapActivity implements View.OnClickListene
     /**
      * 更新地图线信息
      */
-    private void addMapLines() {
+    private void  addMapLines() {
         /*if ((tempLineEntityList == null&&!flag_change)||BaseActivity.list_id.size()==0) {
             tempLineEntityList = DataBaseManagerHelper.getInstance().getAlllinesByProjectId(currentProjectId);
         } else {
@@ -934,34 +936,67 @@ public class MainActivity extends BaseMapActivity implements View.OnClickListene
         }*/
 
         //ist<MapLineEntity> tempLineEntityList = DataBaseManagerHelper.getInstance().getAlllinesByProjectId(currentProjectId);
-         tempLineEntityList = DataBaseManagerHelper.getInstance().getAlllinesByProjectId(currentProjectId);
+        List<MapLineEntity> tempLineEntityList = DataBaseManagerHelper.getInstance().getAlllinesByProjectId(currentProjectId);
 
         if(list_new_mle != null&&list_new_mle.size()!=0&&flag_change) {
 
             for (MapLineEntity entity : tempLineEntityList) {
-                log("KO", entity.getLineId()+"********************************");
+                log("yee", "entity.id "+entity.getLineId());
                 for (String tag : BaseActivity.list_id){
-                    log("KO",tag+"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
-                    if(entity.getLineId().equals(tag)){// TODO: 2016/4/14
+                    if(entity.getLineId().equals(tag)) {// TODO: 2016/4/14
+                        log("yee", "关键线索4   " + tag);
                         DataBaseManagerHelper.getInstance().removeLineByLineId(entity.getLineId());
                         list_item_entity = FileUtil.read(this, "test");
+                        //DataBaseManagerHelper.getInstance().updateInsertConnectLineItems(list_item_entity);
                         String lineName = (String) SharedPreferencesUtils.getParam(MainActivity.this, LineAttributeActivity.LINE_NAME, list_new_mle.get(0).getLineName());
                         entity.setLineName(lineName);
+                        if(flag_once) {
+                            entity.setFlag(MapLineEntity.FIRST_SECLECT);
+                            flag_once = false;
+                        } else {
+                            entity.setFlag(MapLineEntity.OTHER_SELECT);
+                        }
+
+                        log("yee", "关键线索3   " + lineName);
                         entity.setMapLineItemEntityList(list_item_entity);
-                        log("ye", "关键线索1"+list_item_entity.size());
-                        log("ye", "关键线索2"+entity.getMapLineItemEntityList().size());
+                        log("yee", "关键线索1   " + list_item_entity.size());
+                        log("yee", "关键线索2   " + entity.getMapLineItemEntityList().size());
                         DataBaseManagerHelper.getInstance().addOrUpdateOneLineToDb(entity);
                     }
                 }
 
             }
+            DataBaseManagerHelper.getInstance().updateConnectLines(tempLineEntityList);
         }
 
+        for(MapLineEntity lineEntity : tempLineEntityList){
+            log("lala", lineEntity.getFlag()+"  ########################");
+            if(lineEntity.getFlag() == MapLineEntity.OTHER_SELECT){
+                list_other_select.add(lineEntity);
+                log("lala", "1");
+            }
+            if(lineEntity.getFlag() == MapLineEntity.FIRST_SECLECT){
+                firstEntity = lineEntity;
+                log("lala", "2");
+            }
+        }
+
+        if(list_other_select.size() != 0){
+            log("lala", "3");
+            for (MapLineEntity lineEntity : tempLineEntityList){
+                lineEntity.setMapLineItemEntityList(firstEntity.getMapLineItemEntityList());
+            }
+        }
+
+
         for (MapLineEntity lineEntity : tempLineEntityList) {
+            log("yee", "关键线索5   "+lineEntity.getLineId());
             //添加新点位
             if (lineEntity == null) {
                 continue;
             }
+
+
             LatLng startLatlong = new LatLng(lineEntity.getLineStartLatitude(), lineEntity.getLineStartLongitude());
             LatLng endLatlong = new LatLng(lineEntity.getLineEndLatitude(), lineEntity.getLineEndLongitude());
 
@@ -975,6 +1010,12 @@ public class MainActivity extends BaseMapActivity implements View.OnClickListene
                     break;
                 case Constans.MapAttributeType.WIRE_ELECTRIC_CABLE://导线电缆
                     color = convertLineColorByLineItems(lineEntity.getMapLineItemEntityList());
+                    log("yee", "额外的关键线索 "+lineEntity.getMapLineItemEntityList().size()+" ");
+                    if(flag_change){
+                        DataBaseManagerHelper.getInstance().updateInsertConnectLineItems(lineEntity.getMapLineItemEntityList());
+                    }
+                    log("yee", "关键线索6   "+color);
+
                     text = Constans.DECIMALFORMAT_M.format(DistanceUtil.getDistance(startLatlong, endLatlong));
                     break;
             }

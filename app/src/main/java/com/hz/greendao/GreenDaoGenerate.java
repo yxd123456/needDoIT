@@ -117,6 +117,7 @@ public class GreenDaoGenerate {
         Entity note = schema.addEntity("MapLineEntity");
         note.implementsSerializable();
         //跨越线，导线/电缆 公用属性
+
         note.addStringProperty("lineId").primaryKey().index().notNull();
         note.addLongProperty("lineProjId").index().notNull();
         note.addLongProperty("lineUserId").index().notNull();
@@ -141,6 +142,7 @@ public class GreenDaoGenerate {
         note.addStringProperty("lineEndPointName");//结束点名称 用于快速访问
         note.addDoubleProperty("lineLength");//导线/电缆 长度
         note.addIntProperty("lineSpecificationNumber").index().notNull();//规格线数 >1
+        note.addIntProperty("flag").index().notNull();
 
         note.addToMany(item, lineItemLineId);
     }
